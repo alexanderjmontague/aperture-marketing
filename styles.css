@@ -1,0 +1,76 @@
+:root {
+  color-scheme: light;
+  --page-bg: #e8f0f7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.85), transparent 38%),
+    linear-gradient(180deg, #f7fbff 0%, #e0ebf4 52%, #c8d8e6 100%);
+}
+
+body {
+  min-height: 100dvh;
+  font-family: "Google Sans Code", monospace;
+}
+
+.page {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.corner-copy {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+.corner {
+  position: fixed;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 400;
+  color: rgba(78, 96, 116, 0.86);
+  letter-spacing: 0.06em;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.top-left {
+  top: 18px;
+  left: 18px;
+}
+
+.bottom-left {
+  left: 18px;
+  bottom: 18px;
+  font-style: italic;
+}
+
+.bottom-right {
+  right: 18px;
+  bottom: 18px;
+}
+
+#aperture-scene {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
