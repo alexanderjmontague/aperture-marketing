@@ -443,14 +443,14 @@ function drawAperture(centerX, centerY, lensRadius) {
       pointOnCircle(
         centerX,
         centerY,
-        bladeInnerRadius,
-        base + step * 1.08 + twist
+        bladeInnerRadius * 0.9275,
+        base + step * 1.03 + twist
       ),
       pointOnCircle(
         centerX,
         centerY,
-        bladeInnerRadius * 0.92,
-        base + step * 0.02 + twist * 0.82
+        bladeInnerRadius * 0.9,
+        base - step * 0.05 + twist * 0.82
       ),
       pointOnCircle(
         centerX,
