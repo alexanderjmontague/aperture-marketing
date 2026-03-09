@@ -383,6 +383,7 @@ function drawAperture(centerX, centerY, lensRadius) {
   const irisRadius = lensRadius * 0.632;
   const step = TAU / BLADE_COUNT;
   const openness = state.open;
+  const opennessBoost = openness * openness;
   const chamberGradient = ctx.createRadialGradient(
     centerX - irisRadius * 0.22,
     centerY - irisRadius * 0.24,
@@ -428,8 +429,10 @@ function drawAperture(centerX, centerY, lensRadius) {
   drawCircle(centerX, centerY, irisRadius, chamberShadow);
 
   const bladeOuterRadius = irisRadius * 1.46;
-  const bladeShoulderRadius = irisRadius * (0.9 + 0.07 * openness);
-  const bladeInnerRadius = irisRadius * (0.1 + 0.41 * openness);
+  const bladeShoulderRadius =
+    irisRadius * (0.9 + 0.07 * openness + 0.02 * opennessBoost);
+  const bladeInnerRadius =
+    irisRadius * (0.1 + 0.41 * openness + 0.09 * opennessBoost);
   const twist = lerp(step * 0.54, step * 0.14, openness);
   const startAngle = -Math.PI / 2 - step * 0.2;
 
