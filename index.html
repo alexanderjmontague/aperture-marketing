@@ -11,23 +11,67 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <a class="brand-link" href="/" aria-label="Aperture home">
+      <img
+        class="brand-mark"
+        src="./assets/images/aperture_logo.svg"
+        alt=""
+        aria-hidden="true"
+      />
+      <span class="brand-wordmark">APERTURE</span>
+    </a>
     <main class="page">
-      <canvas
-        id="aperture-scene"
-        aria-label="Interactive camera aperture graphic"
-      ></canvas>
+      <section class="frame hero-frame">
+        <div class="aperture-stage">
+          <canvas
+            class="aperture-scene"
+            data-anchor="bottom"
+            aria-label="Interactive camera aperture graphic"
+          ></canvas>
+        </div>
+        <div class="hero-layer">
+          <header class="hero-copy">
+            <h1>The Aperture Project</h1>
+            <p>Continuity and personalization across your agents – without oversharing</p>
+            <div class="hero-actions">
+              <button class="hero-cta" type="button">Read the docs</button>
+              <button class="hero-icon-button" type="button" aria-label="GitHub">
+                <img src="./assets/images/github-invertocat.svg" alt="" aria-hidden="true" />
+              </button>
+            </div>
+          </header>
+        </div>
+      </section>
+      <section class="frame secondary-frame">
+        <div class="aperture-stage">
+          <canvas
+            class="aperture-scene"
+            data-anchor="top"
+            data-theme="outline"
+            aria-label="Interactive camera aperture graphic"
+          ></canvas>
+        </div>
+      </section>
+      <section class="agent-section">
+        <div class="agent-section__inner">
+          <h2>
+            Agents are everywhere. How can we use them without giving them unlimited access
+            to our lives?
+          </h2>
+          <div class="agent-section__grid" aria-label="Agent examples coming soon">
+            <div class="agent-section__card" aria-hidden="true"></div>
+            <div class="agent-section__card" aria-hidden="true"></div>
+            <div class="agent-section__card" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
     </main>
-    <div class="corner-copy" aria-hidden="true">
-      <p class="corner top-left">APERTURE</p>
-      <p class="corner bottom-left">Continuity and personalization across your agents – without oversharing</p>
-      <p class="corner bottom-right">&copy;2026</p>
-    </div>
     <script src="./script.js"></script>
   </body>
 </html>

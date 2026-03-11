@@ -1,22 +1,56 @@
-const canvas = document.getElementById("aperture-scene");
-const ctx = canvas.getContext("2d");
+const canvases = Array.from(document.querySelectorAll(".aperture-scene"));
 
 const TAU = Math.PI * 2;
 const BLADE_COUNT = 12;
-
-const state = {
-  width: window.innerWidth,
-  height: window.innerHeight,
-  dpr: Math.min(window.devicePixelRatio || 1, 2),
-  pointerX: window.innerWidth / 2,
-  pointerY: window.innerHeight / 2,
-  targetOpen: 0,
-  open: 0,
-  tiltX: 0,
-  tiltY: 0,
+const LENS_SCALE = 1.3;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const globalPointer = {
+  active: false,
+  x: 0,
+  y: 0,
 };
 
-const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const scenes = canvases
+  .map((canvas) => ({
+    canvas,
+    ctx: canvas.getContext("2d"),
+    anchor: canvas.dataset.anchor || "center",
+    theme: canvas.dataset.theme || "light",
+    state: {
+      width: 0,
+      height: 0,
+      dpr: Math.min(window.devicePixelRatio || 1, 2),
+      pointerX: 0,
+      pointerY: 0,
+      targetOpen: 0,
+      open: 0,
+      tiltX: 0,
+      tiltY: 0,
+    },
+  }))
+  .filter((scene) => scene.ctx);
+
+function getLensMetrics(scene) {
+  const { state, anchor } = scene;
+  const lensRadius =
+    Math.min(state.width, state.height) *
+    (state.width < 700 ? 0.44 : state.width < 1100 ? 0.39 : 0.34) *
+    LENS_SCALE;
+
+  let centerY = state.height / 2;
+
+  if (anchor === "bottom") {
+    centerY = state.height;
+  } else if (anchor === "top") {
+    centerY = 0;
+  }
+
+  return {
+    centerX: state.width / 2,
+    centerY,
+    lensRadius,
+  };
+}
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -37,14 +71,14 @@ function pointOnCircle(cx, cy, radius, angle) {
   };
 }
 
-function drawCircle(x, y, radius, fillStyle) {
+function drawCircle(ctx, x, y, radius, fillStyle) {
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, TAU);
   ctx.fillStyle = fillStyle;
   ctx.fill();
 }
 
-function strokeCircle(x, y, radius, strokeStyle, lineWidth) {
+function strokeCircle(ctx, x, y, radius, strokeStyle, lineWidth) {
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, TAU);
   ctx.strokeStyle = strokeStyle;
@@ -52,7 +86,7 @@ function strokeCircle(x, y, radius, strokeStyle, lineWidth) {
   ctx.stroke();
 }
 
-function polygonPath(points) {
+function polygonPath(ctx, points) {
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
 
@@ -63,39 +97,80 @@ function polygonPath(points) {
   ctx.closePath();
 }
 
-function resize() {
-  state.width = window.innerWidth;
-  state.height = window.innerHeight;
-  state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+function resizeScene(scene) {
+  const bounds = scene.canvas.getBoundingClientRect();
+  const { state, ctx, canvas } = scene;
+  const nextWidth = Math.round(bounds.width);
+  const nextHeight = Math.round(bounds.height);
+  const nextDpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  if (
+    state.width === nextWidth &&
+    state.height === nextHeight &&
+    state.dpr === nextDpr
+  ) {
+    return;
+  }
+
+  state.width = nextWidth;
+  state.height = nextHeight;
+  state.dpr = nextDpr;
 
   canvas.width = Math.round(state.width * state.dpr);
   canvas.height = Math.round(state.height * state.dpr);
-  canvas.style.width = `${state.width}px`;
-  canvas.style.height = `${state.height}px`;
 
   ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
   ctx.imageSmoothingEnabled = true;
 }
 
-function updatePointer(clientX, clientY) {
+function getMaxDistance(state, centerX, centerY) {
+  return Math.max(
+    Math.hypot(centerX, centerY),
+    Math.hypot(state.width - centerX, centerY),
+    Math.hypot(centerX, state.height - centerY),
+    Math.hypot(state.width - centerX, state.height - centerY)
+  );
+}
+
+function updatePointer(scene, clientX, clientY) {
+  const { state } = scene;
+
+  if (!state.width || !state.height) {
+    return;
+  }
+
   state.pointerX = clientX;
   state.pointerY = clientY;
 
-  const centerX = state.width / 2;
-  const centerY = state.height / 2;
+  const { centerX, centerY } = getLensMetrics(scene);
   const distance = Math.hypot(clientX - centerX, clientY - centerY);
-  const maxDistance = Math.hypot(centerX, centerY) * 0.98;
+  const maxDistance = getMaxDistance(state, centerX, centerY) * 0.98 || 1;
 
-  state.tiltX = clamp((clientX - centerX) / centerX, -1, 1);
-  state.tiltY = clamp((clientY - centerY) / centerY, -1, 1);
+  state.tiltX = clamp((clientX - centerX) / Math.max(centerX, 1), -1, 1);
+  state.tiltY = clamp((clientY - centerY) / Math.max(state.height, 1), -1, 1);
   state.targetOpen = easeOut(clamp(distance / maxDistance, 0, 1));
 }
 
-function resetPointer() {
-  updatePointer(state.width / 2, state.height / 2);
+function resetPointer(scene) {
+  const { centerX, centerY } = getLensMetrics(scene);
+  updatePointer(scene, centerX, centerY);
 }
 
-function drawBackground(centerX, centerY, lensRadius) {
+function syncScenesToWindowPointer(clientX, clientY) {
+  scenes.forEach((scene) => {
+    const bounds = scene.canvas.getBoundingClientRect();
+    updatePointer(scene, clientX - bounds.left, clientY - bounds.top);
+  });
+}
+
+function resetAllScenes() {
+  globalPointer.active = false;
+  scenes.forEach((scene) => {
+    resetPointer(scene);
+  });
+}
+
+function drawBackground(ctx, state, centerX, centerY, lensRadius) {
   const ambient = ctx.createRadialGradient(
     centerX + state.tiltX * lensRadius * 0.15,
     centerY + state.tiltY * lensRadius * 0.12,
@@ -124,7 +199,7 @@ function drawBackground(centerX, centerY, lensRadius) {
   halo.addColorStop(0.34, "rgba(126, 156, 184, 0.14)");
   halo.addColorStop(1, "rgba(0, 0, 0, 0)");
 
-  drawCircle(centerX, centerY, lensRadius * 1.45, halo);
+  drawCircle(ctx, centerX, centerY, lensRadius * 1.45, halo);
 
   const vignette = ctx.createRadialGradient(
     centerX,
@@ -141,7 +216,148 @@ function drawBackground(centerX, centerY, lensRadius) {
   ctx.fillRect(0, 0, state.width, state.height);
 }
 
-function drawScrews(centerX, centerY, radius, size) {
+function drawOutlineBackground(ctx, state) {
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, state.width, state.height);
+}
+
+function drawOutlineScrews(ctx, centerX, centerY, radius, size) {
+  for (let index = 0; index < 6; index += 1) {
+    const angle = (index / 6) * TAU + Math.PI / 12;
+    const point = pointOnCircle(centerX, centerY, radius, angle);
+
+    drawCircle(ctx, point.x, point.y, size, "#000000");
+    strokeCircle(ctx, point.x, point.y, size, "#ffffff", Math.max(1, size * 0.12));
+
+    ctx.save();
+    ctx.translate(point.x, point.y);
+    ctx.rotate(angle + Math.PI / 2);
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = Math.max(1, size * 0.14);
+    ctx.beginPath();
+    ctx.moveTo(-size * 0.42, 0);
+    ctx.lineTo(size * 0.42, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawOutlineBezelMarks(ctx, centerX, centerY, outerRadius) {
+  ctx.save();
+  ctx.translate(centerX, centerY);
+
+  for (let index = 0; index < 72; index += 1) {
+    const angle = (index / 72) * TAU;
+    const isMajor = index % 6 === 0;
+    const inner = outerRadius * (isMajor ? 0.803 : 0.82);
+    const outer = outerRadius * (isMajor ? 0.877 : 0.862);
+
+    ctx.strokeStyle = isMajor ? "rgba(255, 255, 255, 0.78)" : "rgba(255, 255, 255, 0.34)";
+    ctx.lineWidth = isMajor ? 1.35 : 1;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+    ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawOutlineShell(ctx, centerX, centerY, lensRadius) {
+  const ringStroke = Math.max(1.2, lensRadius * 0.005);
+  const fineStroke = Math.max(1, lensRadius * 0.0032);
+
+  drawCircle(ctx, centerX, centerY, lensRadius, "#000000");
+  strokeCircle(ctx, centerX, centerY, lensRadius, "#ffffff", ringStroke);
+
+  drawCircle(ctx, centerX, centerY, lensRadius * 0.928, "#000000");
+  strokeCircle(ctx, centerX, centerY, lensRadius * 0.928, "#ffffff", fineStroke);
+
+  drawCircle(ctx, centerX, centerY, lensRadius * 0.89, "#000000");
+  strokeCircle(ctx, centerX, centerY, lensRadius * 0.89, "#ffffff", fineStroke);
+
+  drawOutlineBezelMarks(ctx, centerX, centerY, lensRadius);
+  drawOutlineScrews(ctx, centerX, centerY, lensRadius * 0.84, lensRadius * 0.034);
+
+  drawCircle(ctx, centerX, centerY, lensRadius * 0.78, "#000000");
+  strokeCircle(ctx, centerX, centerY, lensRadius * 0.78, "#ffffff", fineStroke);
+
+  drawCircle(ctx, centerX, centerY, lensRadius * 0.72, "#000000");
+  strokeCircle(ctx, centerX, centerY, lensRadius * 0.72, "#ffffff", fineStroke);
+}
+
+function drawOutlineAperture(ctx, state, centerX, centerY, lensRadius) {
+  const irisRadius = lensRadius * 0.632;
+  const step = TAU / BLADE_COUNT;
+  const openness = state.open;
+  const opennessBoost = openness * openness;
+  const bladeOuterRadius = irisRadius * 1.46;
+  const bladeShoulderRadius =
+    irisRadius * (0.9 + 0.07 * openness + 0.02 * opennessBoost);
+  const bladeInnerRadius =
+    irisRadius * (0.1 + 0.41 * openness + 0.09 * opennessBoost);
+  const twist = lerp(step * 0.54, step * 0.14, openness);
+  const startAngle = -Math.PI / 2 - step * 0.2;
+  const strokeWidth = Math.max(1, lensRadius * 0.0038);
+
+  drawCircle(ctx, centerX, centerY, irisRadius, "#000000");
+  strokeCircle(ctx, centerX, centerY, irisRadius, "#ffffff", strokeWidth);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, irisRadius * 0.995, 0, TAU);
+  ctx.clip();
+
+  for (let index = 0; index < BLADE_COUNT; index += 1) {
+    const base = startAngle + index * step;
+    const blade = [
+      pointOnCircle(centerX, centerY, bladeOuterRadius, base - step * 1.14),
+      pointOnCircle(centerX, centerY, bladeOuterRadius, base - step * 0.42),
+      pointOnCircle(centerX, centerY, bladeOuterRadius * 0.99, base + step * 0.5),
+      pointOnCircle(centerX, centerY, bladeShoulderRadius, base + step * 0.82),
+      pointOnCircle(
+        centerX,
+        centerY,
+        bladeInnerRadius * 0.9275,
+        base + step * 1.03 + twist
+      ),
+      pointOnCircle(
+        centerX,
+        centerY,
+        bladeInnerRadius * 0.9,
+        base - step * 0.05 + twist * 0.82
+      ),
+      pointOnCircle(
+        centerX,
+        centerY,
+        irisRadius * (0.78 + 0.1 * openness),
+        base - step * 0.2
+      ),
+    ];
+
+    polygonPath(ctx, blade);
+    ctx.fillStyle = "#000000";
+    ctx.fill();
+
+    polygonPath(ctx, blade);
+    ctx.lineWidth = strokeWidth;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  strokeCircle(
+    ctx,
+    centerX,
+    centerY,
+    irisRadius * 1.003,
+    "#ffffff",
+    Math.max(1, lensRadius * 0.0042)
+  );
+}
+
+function drawScrews(ctx, centerX, centerY, radius, size) {
   for (let index = 0; index < 6; index += 1) {
     const angle = (index / 6) * TAU + Math.PI / 12;
     const point = pointOnCircle(centerX, centerY, radius, angle);
@@ -158,9 +374,9 @@ function drawScrews(centerX, centerY, radius, size) {
     screwGradient.addColorStop(0.45, "#bcc6d0");
     screwGradient.addColorStop(1, "#7c8895");
 
-    drawCircle(point.x, point.y, size, screwGradient);
-    strokeCircle(point.x, point.y, size, "rgba(255, 255, 255, 0.55)", 1.2);
-    strokeCircle(point.x, point.y, size, "rgba(97, 112, 128, 0.22)", 2.2);
+    drawCircle(ctx, point.x, point.y, size, screwGradient);
+    strokeCircle(ctx, point.x, point.y, size, "rgba(255, 255, 255, 0.55)", 1.2);
+    strokeCircle(ctx, point.x, point.y, size, "rgba(97, 112, 128, 0.22)", 2.2);
 
     ctx.save();
     ctx.translate(point.x, point.y);
@@ -175,7 +391,7 @@ function drawScrews(centerX, centerY, radius, size) {
   }
 }
 
-function drawBezelMarks(centerX, centerY, outerRadius) {
+function drawBezelMarks(ctx, centerX, centerY, outerRadius) {
   ctx.save();
   ctx.translate(centerX, centerY);
 
@@ -197,7 +413,7 @@ function drawBezelMarks(centerX, centerY, outerRadius) {
   ctx.restore();
 }
 
-function drawShell(centerX, centerY, lensRadius) {
+function drawShell(ctx, state, centerX, centerY, lensRadius) {
   ctx.save();
   ctx.filter = "blur(16px)";
   ctx.fillStyle = "rgba(121, 144, 166, 0.12)";
@@ -227,8 +443,9 @@ function drawShell(centerX, centerY, lensRadius) {
   shellGradient.addColorStop(0.58, "#b3bdc8");
   shellGradient.addColorStop(1, "#8794a2");
 
-  drawCircle(centerX, centerY, lensRadius, shellGradient);
+  drawCircle(ctx, centerX, centerY, lensRadius, shellGradient);
   strokeCircle(
+    ctx,
     centerX,
     centerY,
     lensRadius * 0.992,
@@ -236,6 +453,7 @@ function drawShell(centerX, centerY, lensRadius) {
     lensRadius * 0.014
   );
   strokeCircle(
+    ctx,
     centerX,
     centerY,
     lensRadius * 0.988,
@@ -254,7 +472,7 @@ function drawShell(centerX, centerY, lensRadius) {
   outerWell.addColorStop(0, "#f5f9fc");
   outerWell.addColorStop(0.7, "#dce4ec");
   outerWell.addColorStop(1, "#b9c4cf");
-  drawCircle(centerX, centerY, lensRadius * 0.928, outerWell);
+  drawCircle(ctx, centerX, centerY, lensRadius * 0.928, outerWell);
 
   const bezelGradient = ctx.createRadialGradient(
     centerX - lensRadius * 0.26,
@@ -268,10 +486,10 @@ function drawShell(centerX, centerY, lensRadius) {
   bezelGradient.addColorStop(0.28, "#d5dde6");
   bezelGradient.addColorStop(0.7, "#adb8c4");
   bezelGradient.addColorStop(1, "#8f9ba8");
-  drawCircle(centerX, centerY, lensRadius * 0.89, bezelGradient);
+  drawCircle(ctx, centerX, centerY, lensRadius * 0.89, bezelGradient);
 
-  drawBezelMarks(centerX, centerY, lensRadius);
-  drawScrews(centerX, centerY, lensRadius * 0.84, lensRadius * 0.034);
+  drawBezelMarks(ctx, centerX, centerY, lensRadius);
+  drawScrews(ctx, centerX, centerY, lensRadius * 0.84, lensRadius * 0.034);
 
   const innerBaffle = ctx.createRadialGradient(
     centerX - lensRadius * 0.12,
@@ -284,7 +502,7 @@ function drawShell(centerX, centerY, lensRadius) {
   innerBaffle.addColorStop(0, "#eef4f9");
   innerBaffle.addColorStop(0.7, "#d8e1e9");
   innerBaffle.addColorStop(1, "#b4bec9");
-  drawCircle(centerX, centerY, lensRadius * 0.78, innerBaffle);
+  drawCircle(ctx, centerX, centerY, lensRadius * 0.78, innerBaffle);
 
   const chamberLip = ctx.createRadialGradient(
     centerX - lensRadius * 0.18,
@@ -298,7 +516,7 @@ function drawShell(centerX, centerY, lensRadius) {
   chamberLip.addColorStop(0.28, "#d7dee6");
   chamberLip.addColorStop(0.72, "#b1bcc7");
   chamberLip.addColorStop(1, "#939eab");
-  drawCircle(centerX, centerY, lensRadius * 0.72, chamberLip);
+  drawCircle(ctx, centerX, centerY, lensRadius * 0.72, chamberLip);
 
   ctx.save();
   ctx.lineCap = "round";
@@ -316,7 +534,7 @@ function drawShell(centerX, centerY, lensRadius) {
   ctx.restore();
 }
 
-function drawGlassReflections(centerX, centerY, irisRadius) {
+function drawGlassReflections(ctx, state, centerX, centerY, irisRadius) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(centerX, centerY, irisRadius * 0.995, 0, TAU);
@@ -379,7 +597,7 @@ function drawGlassReflections(centerX, centerY, irisRadius) {
   ctx.restore();
 }
 
-function drawAperture(centerX, centerY, lensRadius) {
+function drawAperture(ctx, state, centerX, centerY, lensRadius) {
   const irisRadius = lensRadius * 0.632;
   const step = TAU / BLADE_COUNT;
   const openness = state.open;
@@ -396,7 +614,7 @@ function drawAperture(centerX, centerY, lensRadius) {
   chamberGradient.addColorStop(0.55, "#d9e2ea");
   chamberGradient.addColorStop(1, "#b2beca");
 
-  drawCircle(centerX, centerY, irisRadius, chamberGradient);
+  drawCircle(ctx, centerX, centerY, irisRadius, chamberGradient);
 
   ctx.save();
   ctx.beginPath();
@@ -413,7 +631,7 @@ function drawAperture(centerX, centerY, lensRadius) {
   irisPlate.addColorStop(0.26, "#e3eaf2");
   irisPlate.addColorStop(0.58, "#c4cdd7");
   irisPlate.addColorStop(1, "#a5b0bc");
-  drawCircle(centerX, centerY, irisRadius, irisPlate);
+  drawCircle(ctx, centerX, centerY, irisRadius, irisPlate);
 
   const chamberShadow = ctx.createRadialGradient(
     centerX,
@@ -426,7 +644,7 @@ function drawAperture(centerX, centerY, lensRadius) {
   chamberShadow.addColorStop(0, "rgba(255, 255, 255, 0.08)");
   chamberShadow.addColorStop(0.44, "rgba(130, 146, 162, 0.06)");
   chamberShadow.addColorStop(1, "rgba(92, 109, 127, 0.12)");
-  drawCircle(centerX, centerY, irisRadius, chamberShadow);
+  drawCircle(ctx, centerX, centerY, irisRadius, chamberShadow);
 
   const bladeOuterRadius = irisRadius * 1.46;
   const bladeShoulderRadius =
@@ -480,12 +698,12 @@ function drawAperture(centerX, centerY, lensRadius) {
     ctx.shadowBlur = lensRadius * 0.018;
     ctx.shadowOffsetX = lensRadius * 0.003;
     ctx.shadowOffsetY = lensRadius * 0.004;
-    polygonPath(blade);
+    polygonPath(ctx, blade);
     ctx.fillStyle = bladeGradient;
     ctx.fill();
     ctx.restore();
 
-    polygonPath(blade);
+    polygonPath(ctx, blade);
     ctx.lineWidth = lensRadius * 0.0026;
     ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
     ctx.stroke();
@@ -505,10 +723,11 @@ function drawAperture(centerX, centerY, lensRadius) {
     ctx.stroke();
   }
 
-  drawGlassReflections(centerX, centerY, irisRadius);
+  drawGlassReflections(ctx, state, centerX, centerY, irisRadius);
   ctx.restore();
 
   strokeCircle(
+    ctx,
     centerX,
     centerY,
     irisRadius * 1.003,
@@ -516,6 +735,7 @@ function drawAperture(centerX, centerY, lensRadius) {
     lensRadius * 0.01
   );
   strokeCircle(
+    ctx,
     centerX,
     centerY,
     irisRadius * 0.995,
@@ -524,36 +744,103 @@ function drawAperture(centerX, centerY, lensRadius) {
   );
 }
 
-function render() {
-  const centerX = state.width / 2;
-  const centerY = state.height / 2;
-  const lensRadius =
-    Math.min(state.width, state.height) *
-    (state.width < 700 ? 0.44 : state.width < 1100 ? 0.39 : 0.34);
+function renderScene(scene) {
+  const { ctx, state } = scene;
+
+  if (!state.width || !state.height) {
+    return;
+  }
+
+  const { centerX, centerY, lensRadius } = getLensMetrics(scene);
 
   ctx.clearRect(0, 0, state.width, state.height);
-  drawBackground(centerX, centerY, lensRadius);
-  drawShell(centerX, centerY, lensRadius);
-  drawAperture(centerX, centerY, lensRadius);
+
+  if (scene.theme === "outline") {
+    drawOutlineBackground(ctx, state);
+    drawOutlineShell(ctx, centerX, centerY, lensRadius);
+    drawOutlineAperture(ctx, state, centerX, centerY, lensRadius);
+    return;
+  }
+
+  drawBackground(ctx, state, centerX, centerY, lensRadius);
+  drawShell(ctx, state, centerX, centerY, lensRadius);
+  drawAperture(ctx, state, centerX, centerY, lensRadius);
+}
+
+function handleResize() {
+  scenes.forEach((scene) => {
+    resizeScene(scene);
+  });
+
+  if (globalPointer.active) {
+    syncScenesToWindowPointer(globalPointer.x, globalPointer.y);
+    return;
+  }
+
+  scenes.forEach((scene) => {
+    resetPointer(scene);
+  });
+}
+
+let resizeFrame = 0;
+
+function scheduleResize() {
+  if (resizeFrame) {
+    return;
+  }
+
+  resizeFrame = window.requestAnimationFrame(() => {
+    resizeFrame = 0;
+    handleResize();
+  });
 }
 
 function tick() {
   const easing = reduceMotion.matches ? 0.22 : 0.085;
-  state.open += (state.targetOpen - state.open) * easing;
-  render();
+
+  scenes.forEach((scene) => {
+    scene.state.open += (scene.state.targetOpen - scene.state.open) * easing;
+    renderScene(scene);
+  });
+
   window.requestAnimationFrame(tick);
 }
 
-window.addEventListener("resize", resize);
-window.addEventListener("pointermove", (event) => {
-  updatePointer(event.clientX, event.clientY);
-});
-window.addEventListener("pointerdown", (event) => {
-  updatePointer(event.clientX, event.clientY);
-});
-window.addEventListener("pointerleave", resetPointer);
-window.addEventListener("blur", resetPointer);
+function handleWindowPointer(event) {
+  globalPointer.active = true;
+  globalPointer.x = event.clientX;
+  globalPointer.y = event.clientY;
+  syncScenesToWindowPointer(event.clientX, event.clientY);
+}
 
-resize();
-resetPointer();
+window.addEventListener("pointermove", handleWindowPointer);
+window.addEventListener("pointerdown", handleWindowPointer);
+window.addEventListener("scroll", () => {
+  if (!globalPointer.active) {
+    return;
+  }
+
+  syncScenesToWindowPointer(globalPointer.x, globalPointer.y);
+});
+window.addEventListener("pointerout", (event) => {
+  if (event.relatedTarget === null) {
+    resetAllScenes();
+  }
+});
+
+window.addEventListener("resize", scheduleResize);
+window.visualViewport?.addEventListener("resize", scheduleResize);
+window.addEventListener("blur", () => {
+  resetAllScenes();
+});
+
+const resizeObserver = new ResizeObserver(() => {
+  scheduleResize();
+});
+
+scenes.forEach((scene) => {
+  resizeObserver.observe(scene.canvas);
+});
+
+handleResize();
 window.requestAnimationFrame(tick);

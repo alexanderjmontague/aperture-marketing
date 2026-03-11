@@ -10,9 +10,9 @@
 html,
 body {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.85), transparent 38%),
     linear-gradient(180deg, #f7fbff 0%, #e0ebf4 52%, #c8d8e6 100%);
@@ -20,57 +20,219 @@ body {
 
 body {
   min-height: 100dvh;
-  font-family: "Google Sans Code", monospace;
+  font-family: Menlo, Monaco, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Inter", sans-serif;
+}
+
+p {
+  letter-spacing: -0.03em;
+}
+
+button {
+  font-family: "Inter", sans-serif;
 }
 
 .page {
-  position: fixed;
+  position: relative;
+}
+
+.frame {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.secondary-frame {
+  background: #000000;
+  height: 50dvh;
+}
+
+.secondary-frame .aperture-stage {
+  inset: 0 0 auto;
+  height: 100dvh;
+}
+
+.agent-section {
+  background: #000000;
+  color: #ffffff;
+  padding: clamp(72px, 12vw, 160px) 24px 120px;
+}
+
+.agent-section__inner {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+}
+
+.agent-section h2 {
+  margin: 0;
+  max-width: 18ch;
+  font-size: clamp(1.85rem, 4vw, 3.9rem);
+  line-height: 0.98;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  color: #ffffff;
+}
+
+.agent-section__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: clamp(36px, 6vw, 56px);
+}
+
+.agent-section__card {
+  min-height: clamp(180px, 28vw, 260px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 18px;
+  background: transparent;
+}
+
+.brand-link {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1;
+  color: inherit;
+  text-decoration: none;
+  z-index: 2;
+}
+
+.brand-mark {
+  width: 36px;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.brand-wordmark {
+  display: inline-block;
+  font-family: "Inter", sans-serif;
+  font-size: 0.52rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.24em;
+  color: rgba(41, 55, 69, 0.82);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.aperture-stage {
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 0;
 }
 
-.corner-copy {
-  position: fixed;
-  inset: 0;
+.hero-layer {
+  position: relative;
   z-index: 1;
+  min-height: 100%;
+  padding: 20dvh 24px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  pointer-events: none;
 }
 
-.corner {
-  position: fixed;
+.hero-copy {
+  width: min(100%, 760px);
+  text-align: center;
   margin: 0;
-  font-size: 11px;
-  line-height: 1;
-  font-weight: 400;
-  color: rgba(78, 96, 116, 0.86);
-  letter-spacing: 0.06em;
+  pointer-events: auto;
   user-select: text;
   -webkit-user-select: text;
 }
 
-.top-left {
-  top: 18px;
-  left: 18px;
+.hero-copy h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 7vw, 5.4rem);
+  line-height: 0.92;
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  color: #293745;
 }
 
-.bottom-left {
-  left: 18px;
-  bottom: 18px;
-  font-style: italic;
+.hero-copy p {
+  margin: 22px auto 0;
+  max-width: 42rem;
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+  line-height: 1.45;
+  color: rgba(78, 96, 116, 0.9);
 }
 
-.bottom-right {
-  right: 18px;
-  bottom: 18px;
+.hero-actions {
+  margin-top: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
 }
 
-#aperture-scene {
-  position: fixed;
+.hero-cta {
+  padding: 0.9rem 1.5rem;
+  border: 0;
+  border-radius: 10px;
+  background: #509e31;
+  color: #f7fbff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hero-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #000000;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.hero-icon-button img {
+  display: block;
+  width: 26px;
+  height: auto;
+}
+
+.aperture-scene {
+  position: absolute;
   inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   touch-action: none;
   cursor: crosshair;
+}
+
+@media (max-width: 640px) {
+  .hero-layer {
+    padding: 20dvh 16px 28px;
+  }
+
+  .agent-section {
+    padding-inline: 16px;
+    padding-bottom: 96px;
+  }
+
+  .agent-section__grid {
+    grid-template-columns: 1fr;
+  }
 }
