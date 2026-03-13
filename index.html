@@ -195,61 +195,93 @@
       </section>
       <section class="scenario-section">
         <div class="scenario-section__inner">
-          <div class="scenario-terminal">
-            <div class="terminal-bar">
-              <span class="terminal-dot"></span>
-              <span class="terminal-dot"></span>
-              <span class="terminal-dot"></span>
-              <span class="terminal-title">aperture</span>
+          <h2 class="scenario-heading">How it works</h2>
+          <p class="scenario-subtitle">"Hey TV, find the video I was watching on my laptop"</p>
+          <div class="flow-diagram">
+
+            <!-- Step 1: TV -->
+            <div class="flow-node flow-node--tv">
+              <div class="flow-device tv-device">
+                <div class="tv-bezel">
+                  <div class="tv-screen">
+                    <div class="tv-content">
+                      <span class="tv-icon">&#x25B6;</span>
+                      <span class="tv-label">Amazon TV Agent</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="tv-stand"></div>
+              </div>
+              <p class="flow-caption">Agent requests your browser history</p>
             </div>
-            <div class="terminal-body">
-              <p class="terminal-line terminal-prompt">
-                <span class="terminal-arrow">&gt;</span>
-                <span class="terminal-agent">Amazon TV Agent</span>
-                <span class="terminal-dim">requests</span>
-              </p>
-              <p class="terminal-line terminal-command">
-                "Find the video I was watching earlier"
-              </p>
-              <div class="terminal-spacer"></div>
-              <p class="terminal-line terminal-step">
-                <span class="step-marker">1</span>
-                Request arrives at Aperture — not your raw browser history
-              </p>
-              <p class="terminal-line terminal-step">
-                <span class="step-marker">2</span>
-                Policy Guardian checks your rules
-              </p>
-              <p class="terminal-line terminal-policy">
-                amazon_tv &rarr; browser_history &rarr; requires_approval
-              </p>
-              <p class="terminal-line terminal-step">
-                <span class="step-marker">3</span>
-                Your phone buzzes
-              </p>
-              <p class="terminal-line terminal-notification">
-                &#x1F4F1; "Amazon TV wants to search your browser history for a recent
-                video"
-              </p>
-              <p class="terminal-line terminal-step">
-                <span class="step-marker">4</span>
-                You tap <span class="terminal-approve">Approve</span> (this session)
-              </p>
-              <p class="terminal-line terminal-step">
-                <span class="step-marker">5</span>
-                Retrieval Guardian searches vault — 1 match found
-              </p>
-              <p class="terminal-line terminal-step">
-                <span class="step-marker">6</span>
-                Response:
-                <code class="terminal-code">youtube.com/watch?v=x7j2...</code>
-              </p>
-              <div class="terminal-spacer"></div>
-              <p class="terminal-line terminal-result">
-                <span class="terminal-arrow">&gt;</span>
-                Video plays on TV. Your full browsing history stays private.
-              </p>
+
+            <!-- Arrow 1 -->
+            <div class="flow-arrow">
+              <svg viewBox="0 0 60 24" fill="none"><path d="M0 12H52M52 12L44 4M52 12L44 20" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
+
+            <!-- Step 2: Aperture shield -->
+            <div class="flow-node flow-node--aperture">
+              <div class="flow-device aperture-device">
+                <svg viewBox="0 0 80 96" fill="none" class="aperture-shield-svg">
+                  <path d="M40 4L72 18V48C72 68 56 84 40 92C24 84 8 68 8 48V18L40 4Z" stroke="#509e31" stroke-width="1.5" fill="rgba(80,158,49,0.05)"/>
+                  <text x="40" y="42" text-anchor="middle" fill="#509e31" font-size="8" font-family="Inter, sans-serif" font-weight="600" letter-spacing="0.06em">POLICY</text>
+                  <text x="40" y="52" text-anchor="middle" fill="rgba(80,158,49,0.4)" font-size="6.5" font-family="Inter, sans-serif">guardian</text>
+                  <line x1="24" y1="62" x2="56" y2="62" stroke="rgba(80,158,49,0.15)" stroke-width="0.5"/>
+                  <text x="40" y="73" text-anchor="middle" fill="rgba(80,158,49,0.35)" font-size="6" font-family="monospace">requires_approval</text>
+                </svg>
+              </div>
+              <p class="flow-caption">Policy Guardian checks your rules</p>
+            </div>
+
+            <!-- Arrow 2 -->
+            <div class="flow-arrow">
+              <svg viewBox="0 0 60 24" fill="none"><path d="M0 12H52M52 12L44 4M52 12L44 20" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+
+            <!-- Step 3: Phone -->
+            <div class="flow-node flow-node--phone">
+              <div class="flow-device phone-device-mini">
+                <div class="phone-mini-notch"></div>
+                <div class="phone-mini-screen">
+                  <div class="phone-mini-notif">
+                    <span class="phone-mini-app">APERTURE</span>
+                    <p class="phone-mini-text">Amazon TV &rarr; browser history</p>
+                    <div class="phone-mini-btns">
+                      <span class="phone-mini-btn phone-mini-btn--yes">Approve</span>
+                      <span class="phone-mini-btn phone-mini-btn--no">Deny</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="phone-mini-bar"></div>
+              </div>
+              <p class="flow-caption">You approve from your phone</p>
+            </div>
+
+            <!-- Arrow 3 -->
+            <div class="flow-arrow">
+              <svg viewBox="0 0 60 24" fill="none"><path d="M0 12H52M52 12L44 4M52 12L44 20" stroke="#509e31" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+
+            <!-- Step 4: Result -->
+            <div class="flow-node flow-node--result">
+              <div class="flow-device result-device">
+                <div class="tv-bezel">
+                  <div class="tv-screen tv-screen--playing">
+                    <div class="tv-playing">
+                      <span class="tv-play-icon">&#x25B6;</span>
+                      <div class="tv-playing-meta">
+                        <span class="tv-playing-title">youtube.com/watch?v=x7j2...</span>
+                        <span class="tv-playing-sub">1 result delivered &middot; history stays private</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="tv-stand"></div>
+              </div>
+              <p class="flow-caption flow-caption--result">Video plays. Your data stays yours.</p>
+            </div>
+
           </div>
         </div>
       </section>
